@@ -11,41 +11,47 @@
 
 using namespace std;
 
+
+
 int main()
 {
-
-    HTTP mhttp;
     string postData;
     cin >> postData;
-
+    HTTP mhttp;
     if (string(getenv("REQUEST_METHOD"))=="POST")
     {
+
         string data = mhttp.httpPost(postData);
         cout << "<p>Значение POST-данных равно: " << data << "</p>";
 
     }
     else {
+        View::StandartView();
         string GetQuery = getenv("QUERY_STRING");
         cout << "<p>Значение GET-данных равно: " << GetQuery << "</p>";
         cout << mhttp.httpGet(GetQuery);
     }
-    
+    cout << mhttp.getCookie("");
     cout << "<p>Значение REQUEST_METHOD равно: " << getenv("REQUEST_METHOD")<< "</p>";
     cout << "<p>Значение HTTP_COOKIE равно: " << getenv("HTTP_COOKIE")<< "</p>";
     return 0;
 }
 
 HTTP::HTTP(){
-    View::StandartView();
+    View::BaseView();
+}
+
+HTTP::HTTP(string key, string value){
+    View::StandartView(key, value);
 }
 
 HTTP::~HTTP(){
     return;
 }
 string HTTP::httpPost(string post) {
-    cout <<"httpPost";
     fstream file("/home/semerf/site/cgi/data.csv", ios_base::out | ios_base::app);
     string buff = "";
+    string key;
     string out;
     int condition=0;
     for(int i = 0; i <= post.length(); ++i)
@@ -57,9 +63,11 @@ string HTTP::httpPost(string post) {
         } else if((post[i]=='&') || i == post.length()){
             
             if(condition==1){
+                key = buff;
                 out+=buff+",";
                 buff="";
             } else if(condition==2){
+                cout << setCookie(key, buff);
                 out+=buff+"\n";
                 buff="";
             };
@@ -154,9 +162,10 @@ string HTTP::httpGetAll() {
 
     return "";
 }
-string HTTP::setCookie(string, string){
-
+string HTTP::setCookie(string key, string value){
+    View::StandartView(key, value);
+    return "cookie set";
 }
 string HTTP::getCookie(string){
-
+    return getenv("HTTP_COOKIE");
 }

@@ -5,6 +5,7 @@ class HTTP
 {
     public:
 	HTTP();
+	HTTP(std::string name, std::string value);
 	std::string httpGet(std::string name);
 	std::string httpGetAll();
 	std::string httpPost(std::string name);

@@ -4,7 +4,9 @@
 
 class View {
     public:
+        static void BaseView();
         static void StandartView();
+        static void StandartView(std::string, std::string);
 };
 
-#endif //__VIEW_HPP
+#endif //VIEW_HPP
