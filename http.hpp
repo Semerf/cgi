@@ -11,6 +11,9 @@ class HTTP
 	std::string httpPost(std::string name);
 	std::string getCookie(std::string name);
 	std::string setCookie(std::string name, std::string value);
+	std::string RawURLDecode(std::string input);
+	unsigned int CtoI(char ch);
+	unsigned int CCtoI(char ch1, char ch2);
 	~HTTP();
 	private:
 	 std::map<std::string, std::string> cookie;

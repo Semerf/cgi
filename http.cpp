@@ -17,18 +17,21 @@ int main()
 {
     string postData;
     cin >> postData;
+
     HTTP mhttp;
+
     if (string(getenv("REQUEST_METHOD"))=="POST")
     {
 
         string data = mhttp.httpPost(postData);
-        cout << "<p>Значение POST-данных равно: " << data << "</p>";
+        //cout << "<p>Значение POST-данных равно: " << data << "</p>";
 
     }
     else {
         View::StandartView();
         string GetQuery = getenv("QUERY_STRING");
-        cout << "<p>Значение GET-данных равно: " << GetQuery << "</p>";
+        string Query = mhttp.RawURLDecode(GetQuery);
+        cout << "<p>Значение GET-данных равно: " << Query << "</p>";
         cout << mhttp.httpGet(GetQuery);
     }
     cout << mhttp.getCookie("");
@@ -49,7 +52,6 @@ HTTP::~HTTP(){
     return;
 }
 string HTTP::httpPost(string post) {
-    fstream file("/home/semerf/site/cgi/data.csv", ios_base::out | ios_base::app);
     string buff = "";
     string key;
     string out;
@@ -59,25 +61,36 @@ string HTTP::httpPost(string post) {
         if (post[i]=='='){
             if(buff=="key") condition = 1;
             if(buff=="value") condition = 2;
+            if(buff=="file") condition=3;
             buff = "";
         } else if((post[i]=='&') || i == post.length()){
             
             if(condition==1){
+                fstream file("/home/semerf/site/cgi/data.csv", ios_base::out | ios_base::app);
                 key = buff;
                 out+=buff+",";
                 buff="";
+                file << out;
+                out = "";
+                file.close();
             } else if(condition==2){
+                fstream file("/home/semerf/site/cgi/data.csv", ios_base::out | ios_base::app);
                 cout << setCookie(key, buff);
                 out+=buff+"\n";
                 buff="";
-            };
+                file << out;
+                out = "";
+                file.close();
+            } else if (condition == 3)
+            {
+                out = buff;
+            }
             condition=0;
         } else{
             buff +=post[i];
         };
     };
-    file << out;
-    file.close();
+
     return out;
 }
 string HTTP::httpGet(string instr) {
@@ -168,4 +181,39 @@ string HTTP::setCookie(string key, string value){
 }
 string HTTP::getCookie(string){
     return getenv("HTTP_COOKIE");
+}
+
+string HTTP::RawURLDecode(string input){
+
+  std::string res = "";
+  for (int i = 0; i < input.length (); i++)
+    {
+        if (input[i] == '+')
+        {
+            res.append(1, ' ');
+        }
+        if (input[i] != '%')
+        {
+            res.append(1, input[i]);
+        }
+        if (input[i] == '%')
+        {
+            i++;  // skip '%'
+            res.append(1, CCtoI(input[i], input[i + 1]));
+            i++;  // skip one hex (other hex will be skiped by i++ in for)
+            continue;
+        }
+    }
+  return res;
+}
+unsigned int HTTP::CtoI(char ch){
+    if (ch >= 'A'){
+	      return ch - 'A' + 10;
+	  }else{
+	      return ch - '0';
+	  }
+}
+
+unsigned int HTTP::CCtoI(char ch1, char ch2){
+    return (CtoI(ch1) << 4) + CtoI(ch2);
 }
