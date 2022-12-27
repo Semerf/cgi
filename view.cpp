@@ -39,7 +39,7 @@ void View::StandartView()
     cout <<  "<p><input name=\"cookie-value\"></p>";
 	cout <<  "<p><input type=\"submit\" value=\"Отправить\"></p>";
     cout << "</form>";
-    cout << "<form action=\"/cgi-bin/test.cgi\" method=\"POST\" enctype=\"application/x-www-form-urlencoded\">";
+    cout << "<form action=\"/cgi-bin/test.cgi\" method=\"POST\" enctype=\"multipart/form-data\">";
     cout <<	"<input type=\"file\" name=\"file\">";
 	cout << "<input type=\"submit\" value=\"Загрузить\">";
     cout << "</form>";
@@ -76,7 +76,7 @@ void View::StandartView(string key,string value)
     cout <<  "<p><input name=\"cookie-value\"></p>";
 	cout <<  "<p><input type=\"submit\" value=\"Отправить\"></p>";
     cout << "</form>";
-    cout << "<form action=\"/cgi-bin/test.cgi\" method=\"POST\" enctype=\"application/x-www-form-urlencoded\">";
+    cout << "<form action=\"/cgi-bin/test.cgi\" method=\"POST\" enctype=\"multipart/form-data\">";
     cout <<	"<input type=\"file\" name=\"file\">";
 	cout << "<input type=\"submit\" value=\"Загрузить\">";
     cout << "</form>";

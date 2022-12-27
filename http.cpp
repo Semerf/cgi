@@ -7,41 +7,165 @@
 #include "http.hpp"
 #include "view.hpp"
 #include <errno.h>
-#include "db.hpp"
+#include <sstream>
+#include <unistd.h>
+#include <cstring>
+#include <iterator>
 
+
+#include <cstdio>
+#include <cerrno>
+#include <cstdlib>
+
+
+
+#define MAX_FILESIZE 248000
 using namespace std;
 
 
 
 int main()
 {
-    string postData;
-    cin >> postData;
+    UploadedFile tstFile;
+	HTTP mhttp;
+    tstFile = mhttp.getFile("attachedFile");
+	if(tstFile.error == 0)
+	mhttp.move_uploaded_file(tstFile, "/home/semerf/files/"+tstFile.filename);
 
-    HTTP mhttp;
-
-    if (string(getenv("REQUEST_METHOD"))=="POST")
-    {
-
-        string data = mhttp.httpPost(postData);
-        //cout << "<p>Значение POST-данных равно: " << data << "</p>";
-
-    }
-    else {
-        View::StandartView();
-        string GetQuery = getenv("QUERY_STRING");
-        string Query = mhttp.RawURLDecode(GetQuery);
-        cout << "<p>Значение GET-данных равно: " << Query << "</p>";
-        cout << mhttp.httpGet(GetQuery);
-    }
-    cout << mhttp.getCookie("");
-    cout << "<p>Значение REQUEST_METHOD равно: " << getenv("REQUEST_METHOD")<< "</p>";
-    cout << "<p>Значение HTTP_COOKIE равно: " << getenv("HTTP_COOKIE")<< "</p>";
     return 0;
 }
 
+// удаление первого пробела
+std::string leftTrim(std::string * str)
+{
+  if (*((*str).begin()) == ' '){
+  (*str).erase((*str).begin());
+  }
+  if ((*((*str).end()-1) == '\n') or (*((*str).end()-1) == '\r')){
+  (*str).erase((*str).end()-1);
+  }
+  return *str;
+}
+
 HTTP::HTTP(){
+    FILE * fp = fopen("err.txt", "w");
+    FILE * of; 
+
+
+    auto key = std::string{};
+    auto val = std::string{};
     View::BaseView();
+    if (getenv("CONTENT_TYPE") != nullptr){
+        //fprintf(fp,getenv("CONTENT_TYPE"));
+        //fprintf(fp,"\n");
+        UploadedFile upf;
+        std::string boundary;
+        std::stringstream strstm(getenv("CONTENT_TYPE"));
+        getline(strstm, val, ';');  // Get Content-Type
+        //fprintf(fp,"%s\n",val.c_str());
+        if (val == "multipart/form-data"){
+            std::getline(strstm, val, '=');  // skip " boundary="
+            std::getline(strstm, boundary);  // get boundary
+            //fprintf(fp, boundary.c_str());
+            int flag = 100000; //100000 строк возможно для чтения
+            int tmpfd = -1;
+            std::ofstream ofile;
+            std::string name;
+            std::string filename;
+            while (flag)
+            {
+                //fprintf(fp,"%d \n", flag);
+                std::string ContentType[2];
+                std::getline(std::cin, val);
+                if(std::cin.eof()){
+                    fprintf(fp,"ERROR: end of cin!!\n");
+                    return;
+                }
+                long long int fs = 0;
+                //fprintf(fp,"%s\n",val.c_str());
+
+                if (leftTrim(&val) == ("--" + boundary)){
+                    std::getline(std::cin, val, '\"');  // SKIP Content-Disposition: form-data; name="
+
+                    std::getline(std::cin, name, '\"');  // get name
+
+                    std::getline(std::cin, val, '\"');  // SKIP "; filename="
+
+                    std::getline(std::cin, filename, '\"');  // get filename
+
+                    std::getline(std::cin, val, '\n');  // skip '"\n'
+
+                    std::getline(std::cin, val, ' ');  // skip "Content-Type: "
+
+                    std::getline(std::cin, ContentType[0], '/');  // get content type before '/'
+
+                    std::getline(std::cin, ContentType[1], '\n');  // get content type
+                    filesData[name].mimetype = ContentType[0];
+                    std::getline(std::cin, val, '\n');  // skip empty line
+
+                    filesData[name].filename = filename;
+                    filesData[name].size = 0;
+                    filesData[name].error = 0;
+                    // Create temp file
+                    
+                    // закрытие файла, если он открыт
+                    if (ofile.is_open()){
+                        ofile.close();
+                    }
+                    char tmpfilename[] = "/tmp/HTTP/HTTPtemp_XXXXXX";
+
+                    tmpfd = mkstemp(tmpfilename);
+
+                    fprintf(fp,"\n%s\n",tmpfilename);
+
+                    ofile.open(tmpfilename, std::ios_base::out | std::ios_base::trunc);
+                    if(!ofile){
+                        fprintf(fp,"\n\n%s\n\n", strerror(errno));
+                    }
+
+                    //
+                    filesData[name].tmp_name = tmpfilename;
+                    // unlink(filename);              // Delete the temporary file.
+                }else{
+                    if (leftTrim(&val) == ("--" + boundary + "--")){  // Exit if end
+                        // fprintf(fp,"e\n");
+                        break;
+                    }
+
+                    ofile << val <<std::endl;
+                    filesData[name].size += val.size()+1;
+                    if (filesData[name].size > MAX_FILESIZE){
+                        filesData[name].error = -1;
+                        break;
+                    }
+                }
+                flag--; //Stop if > 100000 lines
+                if(!flag){
+                    fprintf(fp,"max count!\n");
+                    break;
+                }
+            }
+        }else{
+            if (val == "application/x-www-form-urlencoded"){
+                // parse POST params
+                std::string postData;
+                std::getline(std::cin, postData, static_cast<char>(0));
+                string data = httpPost(postData);
+                }
+            }
+        }
+
+    if (string(getenv("REQUEST_METHOD"))=="GET")
+    {
+        View::StandartView();
+        string GetQuery = getenv("QUERY_STRING");
+        string Query = RawURLDecode(GetQuery);
+        cout << "<p>Значение GET-данных равно: " << Query << "</p>";
+        cout << httpGet(GetQuery);
+    }
+    cout << getCookie("");
+    cout << "<p>Значение REQUEST_METHOD равно: " << getenv("REQUEST_METHOD")<< "</p>";
+    cout << "<p>Значение HTTP_COOKIE равно: " << getenv("HTTP_COOKIE")<< "</p>";
 }
 
 HTTP::HTTP(string key, string value){
@@ -171,10 +295,6 @@ string HTTP::httpGet(string instr) {
     return "is not a request";
 
 }
-string HTTP::httpGetAll() {
-
-    return "";
-}
 string HTTP::setCookie(string key, string value){
     View::StandartView(key, value);
     return "cookie set";
@@ -216,4 +336,22 @@ unsigned int HTTP::CtoI(char ch){
 
 unsigned int HTTP::CCtoI(char ch1, char ch2){
     return (CtoI(ch1) << 4) + CtoI(ch2);
+}
+int HTTP::move_uploaded_file(UploadedFile tmpFile, std::string path){
+    std::ifstream  src(tmpFile.tmp_name, std::ios::binary);
+    std::ofstream  dst(path,   std::ios::binary);
+    if (!src.is_open()){
+        return -1;
+    }
+    if (!dst.is_open()){
+        return -2;
+    }
+    dst << src.rdbuf();
+    unlink(tmpFile.tmp_name.c_str());
+    return 0;
+}
+
+UploadedFile HTTP::getFile(std::string name)
+{
+    return filesData[name];
 }
